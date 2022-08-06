@@ -1,62 +1,32 @@
-'use strict';
+"use strict";
 
-const methods = require('./src/methods');
-const util = require('./src/util');
+const version = "1.0.0";
+const util = require("./src/util");
+const builder = require("./src/builder");
 
-function polyglot(param) {
-    let driver = util.coalesce(param.driver, 'sqlsrv'),
-        database = util.coalesce(param.database),
-        schema = util.coalesce(param.schema),
-        tablename = makeTableName(database, schema, util.coalesce(param.tablename));
-    
-    return new initPolyglot(driver, tablename);
+function fluently(config) {
+    return new fluentlyContext(config);
 }
 
-function initPolyglot(driver, tablename) {
-    this.driver = driver;
-    this.tablename = tablename;
-
-    return util.extend(this, methods);
+function fluentlyContext(config) {
+    util.defineProp(this, "version", version);
+    util.defineProp(this, "driver", util.coalesce(config.driver, "sqlsrv"));
+    util.defineProp(this, "database", util.coalesce(config.database, null));
+    util.extend(this, new builder(this));
 }
 
-/**
- * Construct a new table name with database name and schema name.
- * 
- * @param {string} database 
- * @param {string} schema 
- * @param {string} tablename 
- * @returns 
- */
-function makeTableName(database, schema, tablename) {
-    let name = '';
-
-    if(database != null)
-    {
-        name += '[' + database + '].';
-    }
-
-    if(schema != null)
-    {
-        name += '[' + schema + '].';
-    }
-
-    if(tablename != null)
-    {
-        name += '[' + tablename + ']';
-    }
-
-    return name.toLowerCase();
-}
-
-let db = polyglot({
-    driver: 'sqlsrv',
-    database: 'PAPSI_DEV',
-    schema: 'USERS',
-    tablename: 'muser',
+const db = fluently({
+    driver: "sqlsrv",
+    database: "PAPSI_DEV",
 });
 
-let query1 = db.select({
-    fetch: '*',
-}).top();
+const sql = db.use('ELECTION', 'mvotes')
+                .select()
+                .top(1)
+                .where()
+                .eq('fpk', 10)
+                .eq('fstatus', 1)
+                .notEq('factive', 0)
+                .isNull('fdeleted');
 
-console.log(query1);
+console.log(sql);
